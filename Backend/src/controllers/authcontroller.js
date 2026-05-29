@@ -2,7 +2,42 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import User from "../models/User.js";
+export const getMe = async (req, res) => {
 
+  try {
+
+    res.status(200).json({
+      success: true,
+      user: req.user,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+};
+export const Logout=async(req,res)=>{
+  try{
+    res.cookie("token","",{
+      httpOnly:true,
+      expires:new Date(0)
+    });
+    res.status(200).json({
+      success:true,
+      message:"logged out successfully"
+    })
+  }
+  catch(error){
+    res.status(500).json({
+      success:false,
+      message:error.message
+    })
+  }
+}
 export const signup = async (req, res) => {
   try {
     
