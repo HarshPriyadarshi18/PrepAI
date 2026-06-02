@@ -20,4 +20,11 @@ router.post(
   uploadResume
 );
 
+router.post(
+  "/uploads",
+  protect,
+  upload.single("resume"),
+  uploadResume
+);
+
 export default router;
