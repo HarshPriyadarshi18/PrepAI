@@ -7,7 +7,8 @@ import upload
 from "../middleware/uploadMiddleware.js";
 
 import {
-  uploadResume
+  uploadResume,
+  analyzeResume
 }
 from "../controllers/resumeController.js";
 
@@ -21,10 +22,9 @@ router.post(
 );
 
 router.post(
-  "/uploads",
+  "/analyze/:id",
   protect,
-  upload.single("resume"),
-  uploadResume
+  analyzeResume
 );
 
 export default router;

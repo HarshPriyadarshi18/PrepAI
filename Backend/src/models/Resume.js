@@ -18,6 +18,13 @@ const ResumeSchema=new mongoose.Schema({
       type: String,
       default: "",
     },
+    atsAnalysis:{
+        atsScore:Number,
+        missingKeywords:[String],
+      weakBulletPoints: [String],
+      formattingSuggestions: [String],
+      projectSuggestions: [String],
+    },
 },
    {timestamps:true});
 
