@@ -3,7 +3,14 @@ import User from "../models/User.js";
 
 export const protect=async(req,res,next)=>{
     try{
-        const token=req.cookies.token;
+        // accept token from cookie or Authorization header (Bearer)
+        let token = null;
+        if (req.cookies && req.cookies.token) token = req.cookies.token;
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+            token = authHeader.split(" ")[1];
+        }
+
         if(!token){
             return res.status(401).json({
                 success:false,

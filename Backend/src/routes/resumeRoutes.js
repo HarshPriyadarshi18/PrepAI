@@ -7,13 +7,18 @@ import upload
 from "../middleware/uploadMiddleware.js";
 
 import {
-  uploadResume,
-  analyzeResume
+ uploadResume,
+  analyzeResume,
+  getResumeById,
+
+  getMyResume,
+  getResumes
 }
 from "../controllers/resumeController.js";
 
 const router = express.Router();
 
+router.get("/", protect, getResumes);  // ← add this
 router.post(
   "/upload",
   protect,
@@ -21,10 +26,16 @@ router.post(
   uploadResume
 );
 
+router.get("/my", protect, getMyResume);
 router.post(
   "/analyze/:id",
   protect,
   analyzeResume
 );
 
+router.get(
+  "/:id",
+  protect,
+  getResumeById
+);
 export default router;

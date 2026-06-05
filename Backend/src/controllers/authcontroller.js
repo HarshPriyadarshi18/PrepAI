@@ -24,7 +24,9 @@ export const Logout=async(req,res)=>{
   try{
     res.cookie("token","",{
       httpOnly:true,
-      expires:new Date(0)
+      expires:new Date(0),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
     });
     res.status(200).json({
       success:true,
@@ -72,17 +74,18 @@ export const signup = async (req, res) => {
       }
     );
 
-    // send cookie
+    // send cookie (allow cross-site for dev; secure in production)
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
     });
 
     res.status(201).json({
       success: true,
       message: "User registered successfully",
       user,
+      token,
     });
 
   } catch (error) {
@@ -129,17 +132,18 @@ export const login = async (req, res) => {
       }
     );
 
-    // send cookie
+    // send cookie (allow cross-site for dev; secure in production)
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
     });
 
     res.status(200).json({
       success: true,
       message: "Login successful",
       user,
+      token,
     });
 
   } catch (error) {
