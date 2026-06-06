@@ -3,6 +3,7 @@ import cors from "cors";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authroutes.js";
+import interviewRoutes from "./routes/interviewRoutes.js";
  import path from "path";
 const app=express();
 app.use(express.json());
@@ -15,6 +16,7 @@ app.use(cors(
     }
 ));
 app.use(cookieParser());
+app.use("/api/interviews",interviewRoutes);
 app.use("/api/resumes",resumeRoutes);
 app.get("/",(req,res)=>{
     res.status(200).json({message:"Hello World"});
