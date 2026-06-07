@@ -97,16 +97,62 @@ export const submitAnswers = async (req, res) => {
 
 		const text = completion.choices[0].message.content;
 
-		let result;
-		try {
-			result = JSON.parse(text);
-		} catch (err) {
-			// fallback simple scoring
-			result = { score: 50, feedback: "Model returned invalid JSON; partial grading applied." };
+		// Helper: try to extract JSON from a model response
+		const extractJson = (str) => {
+			if (!str || typeof str !== "string") return null;
+			// Look for ```json ... ``` or ``` ... ``` code fences first
+			const fenced = str.match(/```(?:json)?\s*([\s\S]*?)```/i);
+			if (fenced && fenced[1]) {
+				try { return JSON.parse(fenced[1].trim()); } catch (e) { /* fallthrough */ }
+			}
+
+			// Try to find the first JSON object in the text
+			const firstObjStart = str.indexOf("{");
+			const lastObjEnd = str.lastIndexOf("}");
+			if (firstObjStart !== -1 && lastObjEnd !== -1 && lastObjEnd > firstObjStart) {
+				const maybe = str.substring(firstObjStart, lastObjEnd + 1);
+				try { return JSON.parse(maybe); } catch (e) { /* fallthrough */ }
+			}
+
+			// As a last attempt, try to parse the whole string (in case it's valid JSON with whitespace)
+			try { return JSON.parse(str); } catch (e) { return null; }
+		};
+
+		let result = extractJson(text);
+
+		// If extraction failed, retry the model with a stricter prompt (temperature 0)
+		if (!result) {
+			const retryPrompt = `Return ONLY a single JSON object (no explanation) with keys:\n{\n  \"score\": 0,\n  \"feedback\": \"\"\n}\n\nQuestions:\n${JSON.stringify(interview.questions, null, 2)}\n\nAnswers:\n${JSON.stringify(answers, null, 2)}`;
+
+			try {
+				const retry = await groq.chat.completions.create({
+					messages: [{ role: "user", content: retryPrompt }],
+					model: "llama-3.3-70b-versatile",
+					// lower randomness if supported by provider
+					// temperature: 0
+				});
+				const retryText = retry.choices[0].message.content;
+				result = extractJson(retryText);
+			} catch (e) {
+				result = null;
+			}
 		}
 
-		interview.score = typeof result.score === "number" ? result.score : 0;
-		interview.feedback = result.feedback || "";
+		// Heuristic fallback: simple completeness-based scoring
+		if (!result) {
+			const total = Array.isArray(interview.questions) ? interview.questions.length : 0;
+			const filled = Array.isArray(answers)
+				? answers.filter(a => typeof a === 'string' && a.trim().length > 0).length
+				: 0;
+			const heuristicScore = total > 0 ? Math.round((filled / total) * 100) : 0;
+			result = {
+				score: heuristicScore,
+				feedback: "Model returned invalid JSON after retry; applied heuristic grading based on completeness."
+			};
+		}
+
+		interview.score = typeof result.score === "number" ? Math.max(0, Math.min(100, result.score)) : 0;
+		interview.feedback = typeof result.feedback === "string" ? result.feedback : "";
 
 		await interview.save();
 
