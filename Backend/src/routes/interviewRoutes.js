@@ -3,7 +3,10 @@ import express from "express";
 import {
 startInterview,
 submitAnswers,
-getResult
+getResult,
+getAnalytics,
+getInterviewHistory,
+getInterviewById
 }
 from "../controllers/interviewController.js";
 
@@ -29,5 +32,23 @@ router.get(
 protect,
 getResult
 );
+router.get(
+  "/analytics",
+  protect,
+  getAnalytics
+);
+
+router.get(
+  "/history",
+  protect,
+  getInterviewHistory
+);
+
+router.get(
+  "/history/:id",
+  protect,
+  getInterviewById
+);
+
 
 export default router;

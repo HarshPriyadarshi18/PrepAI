@@ -178,3 +178,77 @@ export const getResult = async (req, res) => {
 		res.status(500).json({ success: false, message: error.message });
 	}
 };
+
+export const getAnalytics = async (req, res) => {
+  try {
+    const user = req.user.id;
+
+    const interviews = await Interview.find({ user });
+
+    const totalInterviews = interviews.length;
+
+    const averageScore =
+      totalInterviews > 0
+        ? (
+            interviews.reduce(
+              (sum, interview) => sum + interview.score,
+              0
+            ) / totalInterviews
+          ).toFixed(2)
+        : 0;
+
+    const highestScore =
+      totalInterviews > 0
+        ? Math.max(...interviews.map((i) => i.score))
+        : 0;
+
+    const latestScore =
+      totalInterviews > 0
+        ? interviews[interviews.length - 1].score
+        : 0;
+
+    res.status(200).json({
+      totalInterviews,
+      averageScore,
+      highestScore,
+      latestScore,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+export const getInterviewHistory = async (req, res) => {
+  try {
+    const user = req.user.id;
+
+    const interviews = await Interview.find({ user })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(interviews);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+export const getInterviewById = async (req, res) => {
+  try {
+    const interview = await Interview.findById(
+      req.params.id
+    );
+
+    if (!interview) {
+      return res.status(404).json({
+        message: "Interview not found",
+      });
+    }
+
+    res.status(200).json(interview);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
