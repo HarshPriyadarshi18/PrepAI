@@ -1,0 +1,86 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+
+export default function SignupPage() {
+  const router = useRouter()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      const res = await fetch(`${apiBase}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+        credentials: "include",
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.message || "Signup failed")
+
+      if (data.token) {
+        try { localStorage.setItem("token", data.token) } catch (e) {}
+      }
+
+      // After signup, send user to the login page so they can sign in.
+      router.push("/login")
+    } catch (err: any) {
+      setError(err.message || "Signup failed")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <form onSubmit={handleSubmit} style={{ width: 420, padding: 32, border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+        <h1 style={{ marginBottom: 16, fontSize: 24 }}>Create account</h1>
+        {error && <div style={{ color: "#b91c1c", marginBottom: 12 }}>{error}</div>}
+
+        <label style={{ display: "block", marginBottom: 8 }}>Name</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          type="text"
+          required
+          style={{ width: "100%", padding: 8, marginBottom: 12, borderRadius: 4, border: "1px solid #d1d5db" }}
+        />
+
+        <label style={{ display: "block", marginBottom: 8 }}>Email</label>
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          required
+          style={{ width: "100%", padding: 8, marginBottom: 12, borderRadius: 4, border: "1px solid #d1d5db" }}
+        />
+
+        <label style={{ display: "block", marginBottom: 8 }}>Password</label>
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          required
+          style={{ width: "100%", padding: 8, marginBottom: 16, borderRadius: 4, border: "1px solid #d1d5db" }}
+        />
+
+        <button type="submit" disabled={loading} style={{ width: "100%", padding: 10, backgroundColor: "#111827", color: "#fff", borderRadius: 4, border: "none" }}>
+          {loading ? "Creating..." : "Create account"}
+        </button>
+
+        <div style={{ marginTop: 12, textAlign: "center" }}>
+          <a href="/login" style={{ color: "#3b82f6" }}>Already have an account? Sign in</a>
+        </div>
+      </form>
+    </div>
+  )
+}
