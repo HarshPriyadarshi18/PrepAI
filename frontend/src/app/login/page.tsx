@@ -1,0 +1,54 @@
+"use client";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '../../lib/api';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const token = res.data?.token || res.token || res.data;
+      if (!token) throw new Error('No token returned');
+      localStorage.setItem('token', token);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-md mx-auto glass p-6 rounded-lg shadow-lg mt-12">
+      <h1 className="text-2xl font-semibold mb-4">Login</h1>
+      {error && <div className="text-red-400 mb-2">{error}</div>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          className="w-full p-3 rounded bg-transparent border border-gray-700"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          className="w-full p-3 rounded bg-transparent border border-gray-700"
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button className="w-full p-3 bg-indigo-600 rounded hover:bg-indigo-500" disabled={loading}>
+          {loading ? 'Logging in…' : 'Login'}
+        </button>
+      </form>
+    </div>
+  );
+}
