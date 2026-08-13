@@ -219,6 +219,7 @@ export const getAnalytics = async (req, res) => {
     });
   }
 };
+
 export const getInterviewHistory = async (req, res) => {
   try {
     const user = req.user.id;
@@ -233,6 +234,7 @@ export const getInterviewHistory = async (req, res) => {
     });
   }
 };
+
 export const getInterviewById = async (req, res) => {
   try {
     const interview = await Interview.findById(
@@ -251,4 +253,28 @@ export const getInterviewById = async (req, res) => {
       message: error.message,
     });
   }
+};
+
+// NAYA — coding round ke liye AI follow-up question generate karta hai
+export const getCodeFollowUp = async (req, res) => {
+	try {
+		const { question, code, language } = req.body;
+
+		if (!question || !code || !language) {
+			return res.status(400).json({ success: false, message: "question, code and language are required" });
+		}
+
+		const prompt = `You are a technical interviewer. The candidate solved this problem: "${question}". Their ${language} solution:\n\n${code}\n\nAsk ONE short, specific follow-up question about their approach, time/space complexity, or an edge case they may have missed. Return ONLY the follow-up question as plain text, no JSON, no prose before/after.`;
+
+		const completion = await groq.chat.completions.create({
+			messages: [{ role: "user", content: prompt }],
+			model: "llama-3.3-70b-versatile",
+		});
+
+		const followUp = completion.choices[0].message.content.trim();
+
+		res.status(200).json({ success: true, followUp });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
 };

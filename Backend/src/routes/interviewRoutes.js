@@ -1,5 +1,5 @@
 import express from "express";
-
+import { getCodeFollowUp } from "../controllers/interviewController.js";
 import {
 startInterview,
 submitAnswers,
@@ -37,7 +37,7 @@ router.get(
   protect,
   getAnalytics
 );
-
+router.post("/followup", protect, getCodeFollowUp);
 router.get(
   "/history",
   protect,
