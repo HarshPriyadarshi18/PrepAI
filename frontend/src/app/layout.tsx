@@ -1,6 +1,6 @@
 import React from 'react';
-import './styles/globals.css';
-import Navbar from '../../components/Navbar';
+import '../styles/globals.css';
+import Navbar from '../components/Navbar';
 
 export const metadata = {
   title: 'PrepAI',

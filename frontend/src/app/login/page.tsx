@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const res = await api.post('/auth/login', { email, password });
-      const token = res.data?.token || res.token || res.data;
+      const token = res.data?.token;
       if (!token) throw new Error('No token returned');
       localStorage.setItem('token', token);
       router.push('/dashboard');

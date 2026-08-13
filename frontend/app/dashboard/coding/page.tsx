@@ -10,6 +10,7 @@ export default function CodingPage() {
   const [code, setCode] = useState("// Start coding here");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     const savedCode =
@@ -40,9 +41,9 @@ export default function CodingPage() {
   }, [code, language]);
 
   const handleRun = () => {
-    setOutput(
-      "Judge0 integration coming on Day 13..."
-    );
+    setIsRunning(true);
+    setOutput("Judge0 integration coming on Day 13...");
+    setTimeout(() => setIsRunning(false), 600);
   };
 
   return (
@@ -63,12 +64,15 @@ export default function CodingPage() {
           language={language}
           setLanguage={setLanguage}
           handleRun={handleRun}
+          isRunning={isRunning}
         />
 
         <CodeEditor
           language={language}
           code={code}
           setCode={setCode}
+          onRunShortcut={handleRun}
+          isRunning={isRunning}
         />
 
         <InputPanel
