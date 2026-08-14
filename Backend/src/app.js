@@ -20,7 +20,7 @@ app.use(cors(
 
 app.use("/api/execute", executeRoutes);
 app.use(cookieParser());
-app.use("/api/interviews",interviewRoutes);
+app.use(["/api/interview", "/api/interviews"], interviewRoutes);
 app.use("/api/resumes",resumeRoutes);
 app.use("/api/questions", questionRoutes);
 app.get("/",(req,res)=>{
