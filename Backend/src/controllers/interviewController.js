@@ -278,3 +278,64 @@ export const getCodeFollowUp = async (req, res) => {
 		res.status(500).json({ success: false, message: error.message });
 	}
 };
+
+// Candidate ke follow-up answer ko grade karta hai
+export const gradeFollowUpAnswer = async (req, res) => {
+	try {
+		const { question, code, language, followUpQuestion, answer } = req.body;
+
+		if (!followUpQuestion || !answer) {
+			return res.status(400).json({ success: false, message: "followUpQuestion and answer are required" });
+		}
+
+		const prompt = `You are a technical interviewer evaluating a candidate's answer to a follow-up question.
+
+Original coding problem: "${question}"
+Candidate's code (${language}):
+${code}
+
+Follow-up question asked: "${followUpQuestion}"
+Candidate's answer: "${answer}"
+
+Evaluate the answer for technical correctness, depth of understanding, and clarity. Return ONLY a single JSON object (no prose, no markdown fences) with keys:
+{
+  "score": 0,
+  "feedback": ""
+}`;
+
+		const completion = await groq.chat.completions.create({
+			messages: [{ role: "user", content: prompt }],
+			model: "llama-3.3-70b-versatile",
+		});
+
+		const text = completion.choices[0].message.content;
+
+		const extractJson = (str) => {
+			if (!str || typeof str !== "string") return null;
+			const fenced = str.match(/```(?:json)?\s*([\s\S]*?)```/i);
+			if (fenced && fenced[1]) {
+				try { return JSON.parse(fenced[1].trim()); } catch (e) {}
+			}
+			const firstObjStart = str.indexOf("{");
+			const lastObjEnd = str.lastIndexOf("}");
+			if (firstObjStart !== -1 && lastObjEnd !== -1 && lastObjEnd > firstObjStart) {
+				const maybe = str.substring(firstObjStart, lastObjEnd + 1);
+				try { return JSON.parse(maybe); } catch (e) {}
+			}
+			try { return JSON.parse(str); } catch (e) { return null; }
+		};
+
+		let result = extractJson(text);
+
+		if (!result) {
+			result = { score: 0, feedback: "Could not evaluate the answer. Please try again." };
+		}
+
+		result.score = typeof result.score === "number" ? Math.max(0, Math.min(10, result.score)) : 0;
+		result.feedback = typeof result.feedback === "string" ? result.feedback : "";
+
+		res.status(200).json({ success: true, ...result });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};

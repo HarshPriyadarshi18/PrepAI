@@ -1,5 +1,8 @@
 import express from "express";
-import { getCodeFollowUp } from "../controllers/interviewController.js";
+import {
+  getCodeFollowUp,
+  gradeFollowUpAnswer,
+} from "../controllers/interviewController.js";
 import {
 startInterview,
 submitAnswers,
@@ -38,6 +41,7 @@ router.get(
   getAnalytics
 );
 router.post("/followup", protect, getCodeFollowUp);
+router.post("/followup/grade", protect, gradeFollowUpAnswer);
 router.get(
   "/history",
   protect,
