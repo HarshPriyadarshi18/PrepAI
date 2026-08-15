@@ -1,4 +1,5 @@
 import Interview from "../models/Interview.js";
+import CodingAttempt from "../models/CodingAttempt.js";
 import groq from "../config/groq.js";
 
 export const startInterview = async(req,res)=>{
@@ -66,7 +67,84 @@ message:error.message
 
 }
 };
+export const saveCodingAttempt = async (req, res) => {
+	try {
+		const {
+			questionTitle,
+			difficulty,
+			language,
+			code,
+			codingScore,
+			passed,
+			total,
+			followUp1,
+			followUp2,
+		} = req.body;
 
+		if (!questionTitle || !difficulty || !language || codingScore === undefined) {
+			return res.status(400).json({ success: false, message: "Missing required fields" });
+		}
+
+		const scores = [codingScore];
+		if (followUp1?.score !== undefined) scores.push(followUp1.score);
+		if (followUp2?.score !== undefined) scores.push(followUp2.score);
+
+		const overallScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+
+		const attempt = await CodingAttempt.create({
+			user: req.user._id,
+			questionTitle,
+			difficulty,
+			language,
+			code,
+			codingScore,
+			passed,
+			total,
+			followUp1,
+			followUp2,
+			overallScore: Math.round(overallScore * 10) / 10,
+		});
+
+		res.status(201).json({ success: true, attempt });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+// NAYA — coding attempts history
+export const getCodingHistory = async (req, res) => {
+	try {
+		const attempts = await CodingAttempt.find({ user: req.user._id }).sort({ createdAt: -1 });
+		res.status(200).json({ success: true, attempts });
+	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+// NAYA — coding analytics
+export const getCodingAnalytics = async (req, res) => {
+	try {
+		const attempts = await CodingAttempt.find({ user: req.user._id });
+
+		const totalAttempts = attempts.length;
+		const averageScore =
+			totalAttempts > 0
+				? (attempts.reduce((sum, a) => sum + a.overallScore, 0) / totalAttempts).toFixed(1)
+				: 0;
+		const highestScore =
+			totalAttempts > 0 ? Math.max(...attempts.map((a) => a.overallScore)) : 0;
+		const latestScore = totalAttempts > 0 ? attempts[0].overallScore : 0;
+
+		res.status(200).json({
+			totalAttempts,
+			averageScore,
+			highestScore,
+			latestScore,
+		});
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
 export const submitAnswers = async (req, res) => {
 	try {
 		const { answers } = req.body;
@@ -255,16 +333,24 @@ export const getInterviewById = async (req, res) => {
   }
 };
 
-// NAYA — coding round ke liye AI follow-up question generate karta hai
+// UPDATED — coding round ke liye AI follow-up question generate karta hai (round-aware)
 export const getCodeFollowUp = async (req, res) => {
 	try {
-		const { question, code, language } = req.body;
+		const { question, code, language, round } = req.body;
 
 		if (!question || !code || !language) {
 			return res.status(400).json({ success: false, message: "question, code and language are required" });
 		}
 
-		const prompt = `You are a technical interviewer. The candidate solved this problem: "${question}". Their ${language} solution:\n\n${code}\n\nAsk ONE short, specific follow-up question about their approach, time/space complexity, or an edge case they may have missed. Return ONLY the follow-up question as plain text, no JSON, no prose before/after.`;
+		let prompt;
+
+		if (round === 2) {
+			// Second follow-up — specifically about complexity/optimization
+			prompt = `You are a technical interviewer. The candidate solved this problem: "${question}". Their ${language} solution:\n\n${code}\n\nAsk ONE short, specific follow-up question about the TIME COMPLEXITY or SPACE COMPLEXITY of their solution, or whether/how it could be optimized further. Examples of the style: "What is the time and space complexity of your solution?", "Can you optimize this further? If so, how?". Return ONLY the follow-up question as plain text, no JSON, no prose before/after.`;
+		} else {
+			// First follow-up — approach/edge-case focused
+			prompt = `You are a technical interviewer. The candidate solved this problem: "${question}". Their ${language} solution:\n\n${code}\n\nAsk ONE short, specific follow-up question about their approach or an edge case they may have missed (not about complexity — that will be asked separately). Return ONLY the follow-up question as plain text, no JSON, no prose before/after.`;
+		}
 
 		const completion = await groq.chat.completions.create({
 			messages: [{ role: "user", content: prompt }],

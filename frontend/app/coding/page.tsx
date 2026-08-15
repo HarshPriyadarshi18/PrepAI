@@ -126,11 +126,18 @@ export default function CodingPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<any>(null);
+
   const [followUp, setFollowUp] = useState("");
   const [loadingFollowUp, setLoadingFollowUp] = useState(false);
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [gradingAnswer, setGradingAnswer] = useState(false);
   const [followUpGrade, setFollowUpGrade] = useState<any>(null);
+
+  const [followUp2, setFollowUp2] = useState("");
+  const [loadingFollowUp2, setLoadingFollowUp2] = useState(false);
+  const [followUpAnswer2, setFollowUpAnswer2] = useState("");
+  const [gradingAnswer2, setGradingAnswer2] = useState(false);
+  const [followUpGrade2, setFollowUpGrade2] = useState<any>(null);
 
   // Resizable panel widths/heights
   const containerRef = useRef<HTMLDivElement>(null);
@@ -183,6 +190,9 @@ export default function CodingPage() {
       setFollowUp("");
       setFollowUpAnswer("");
       setFollowUpGrade(null);
+      setFollowUp2("");
+      setFollowUpAnswer2("");
+      setFollowUpGrade2(null);
     } catch (err) {
       console.error(err);
       setQuestionError("Failed to connect to backend.");
@@ -250,6 +260,9 @@ export default function CodingPage() {
     setFollowUp("");
     setFollowUpAnswer("");
     setFollowUpGrade(null);
+    setFollowUp2("");
+    setFollowUpAnswer2("");
+    setFollowUpGrade2(null);
 
     try {
       const token = localStorage.getItem("token");
@@ -291,7 +304,7 @@ export default function CodingPage() {
       const res = await fetch(`${BACKEND_URL}/api/interview/followup`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ question: question.title, code, language }),
+        body: JSON.stringify({ question: question.title, code, language, round: 1 }),
       });
       const data = await res.json();
       if (data.success) setFollowUp(data.followUp);
@@ -299,6 +312,25 @@ export default function CodingPage() {
       console.error(err);
     } finally {
       setLoadingFollowUp(false);
+    }
+  };
+
+  const fetchFollowUp2 = async () => {
+    setLoadingFollowUp2(true);
+    setFollowUp2("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${BACKEND_URL}/api/interview/followup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ question: question.title, code, language, round: 2 }),
+      });
+      const data = await res.json();
+      if (data.success) setFollowUp2(data.followUp);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingFollowUp2(false);
     }
   };
 
@@ -320,11 +352,76 @@ export default function CodingPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) setFollowUpGrade(data);
+      if (data.success) {
+        setFollowUpGrade(data);
+        fetchFollowUp2();
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setGradingAnswer(false);
+    }
+  };
+
+  const submitFollowUpAnswer2 = async () => {
+    if (!followUpAnswer2.trim()) return;
+    setGradingAnswer2(true);
+    setFollowUpGrade2(null);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${BACKEND_URL}/api/interview/followup/grade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          question: question.title,
+          code,
+          language,
+          followUpQuestion: followUp2,
+          answer: followUpAnswer2,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFollowUpGrade2(data);
+
+        // NAYA — poora coding-round attempt backend me save karo
+        try {
+          await fetch(`${BACKEND_URL}/api/interview/coding-attempt`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              questionTitle: question.title,
+              difficulty: question.difficulty,
+              language,
+              code,
+              codingScore: submitResult.score,
+              passed: submitResult.passed,
+              total: submitResult.total,
+              followUp1: {
+                question: followUp,
+                answer: followUpAnswer,
+                score: followUpGrade.score,
+                feedback: followUpGrade.feedback,
+              },
+              followUp2: {
+                question: followUp2,
+                answer: followUpAnswer2,
+                score: data.score,
+                feedback: data.feedback,
+              },
+            }),
+          });
+        } catch (saveErr) {
+          console.error("Failed to save coding attempt", saveErr);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGradingAnswer2(false);
     }
   };
 
@@ -562,6 +659,100 @@ export default function CodingPage() {
                   <p className="text-slate-300 text-sm">{followUpGrade.feedback}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {loadingFollowUp2 && (
+            <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
+              <span className="w-4 h-4 border-2 border-slate-600 border-t-indigo-400 rounded-full animate-spin" />
+              Interviewer is thinking of a complexity question...
+            </div>
+          )}
+
+          {followUp2 && (
+            <div className="mt-4 bg-linear-to-br from-indigo-900/30 to-indigo-900/10 border border-indigo-700/40 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                <h3 className="text-indigo-300 font-semibold text-sm">Complexity & Optimization</h3>
+              </div>
+              <p className="text-indigo-100 text-sm leading-relaxed mb-3">{followUp2}</p>
+
+              <textarea
+                value={followUpAnswer2}
+                onChange={(e) => setFollowUpAnswer2(e.target.value)}
+                placeholder="Type your answer here..."
+                rows={3}
+                className="w-full bg-slate-900/60 text-white border border-indigo-700/40 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none mb-3"
+              />
+
+              <button
+                onClick={submitFollowUpAnswer2}
+                disabled={gradingAnswer2 || !followUpAnswer2.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2 rounded-lg text-sm font-semibold transition"
+              >
+                {gradingAnswer2 ? "Evaluating..." : "Submit Answer"}
+              </button>
+
+              {followUpGrade2 && (
+                <div className="mt-4 bg-black/30 border border-indigo-700/30 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-indigo-300 text-xs font-semibold uppercase tracking-wide">
+                      Answer Evaluation
+                    </span>
+                    <span
+                      className={`text-lg font-bold ${
+                        followUpGrade2.score >= 7 ? "text-emerald-400" : followUpGrade2.score >= 4 ? "text-amber-400" : "text-rose-400"
+                      }`}
+                    >
+                      {followUpGrade2.score} / 10
+                    </span>
+                  </div>
+                  <p className="text-slate-300 text-sm">{followUpGrade2.feedback}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {submitResult?.score !== undefined && followUpGrade?.score !== undefined && followUpGrade2?.score !== undefined && (
+            <div className="mt-4 bg-linear-to-br from-blue-900/30 to-indigo-900/20 border border-blue-700/40 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-blue-300 font-semibold text-sm uppercase tracking-wide">
+                  Overall Performance
+                </h3>
+                <span
+                  className={`text-3xl font-bold ${
+                    (submitResult.score + followUpGrade.score + followUpGrade2.score) / 3 >= 7
+                      ? "text-emerald-400"
+                      : (submitResult.score + followUpGrade.score + followUpGrade2.score) / 3 >= 4
+                      ? "text-amber-400"
+                      : "text-rose-400"
+                  }`}
+                >
+                  {((submitResult.score + followUpGrade.score + followUpGrade2.score) / 3).toFixed(1)} / 10
+                </span>
+              </div>
+
+              <div className="flex gap-3 text-xs text-slate-400">
+                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
+                  <p className="text-slate-500 mb-1">Coding</p>
+                  <p className="text-white font-semibold text-sm">{submitResult.score} / 10</p>
+                </div>
+                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
+                  <p className="text-slate-500 mb-1">Follow-up 1</p>
+                  <p className="text-white font-semibold text-sm">{followUpGrade.score} / 10</p>
+                </div>
+                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
+                  <p className="text-slate-500 mb-1">Follow-up 2</p>
+                  <p className="text-white font-semibold text-sm">{followUpGrade2.score} / 10</p>
+                </div>
+              </div>
+
+              <div className="w-full bg-slate-900/60 rounded-full h-1.5 mt-3 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-blue-500 to-indigo-400 transition-all duration-700"
+                  style={{ width: `${((submitResult.score + followUpGrade.score + followUpGrade2.score) / 3 / 10) * 100}%` }}
+                />
+              </div>
             </div>
           )}
 

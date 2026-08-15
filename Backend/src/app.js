@@ -23,6 +23,7 @@ app.use(cookieParser());
 app.use(["/api/interview", "/api/interviews"], interviewRoutes);
 app.use("/api/resumes",resumeRoutes);
 app.use("/api/questions", questionRoutes);
+app.use("/api/interview", interviewRoutes);
 app.get("/",(req,res)=>{
     res.status(200).json({message:"Hello World"});
 });
