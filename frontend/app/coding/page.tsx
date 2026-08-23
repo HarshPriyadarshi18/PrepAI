@@ -7,6 +7,7 @@ import LanguageSelector from "./languageSelector";
 import OutputPanel from "./outputPanel";
 
 const BACKEND_URL = "http://localhost:5000";
+const TIMER_DURATION = 45 * 60; // 45 minutes in seconds
 
 const DIFFICULTY_STYLES: Record<string, { badge: string; button: string; glow: string }> = {
   easy: {
@@ -139,6 +140,12 @@ export default function CodingPage() {
   const [gradingAnswer2, setGradingAnswer2] = useState(false);
   const [followUpGrade2, setFollowUpGrade2] = useState<any>(null);
 
+  const [timeLeft, setTimeLeft] = useState(TIMER_DURATION);
+  const [timerActive, setTimerActive] = useState(false);
+
+  // NAYA — theme toggle
+  const [isDark, setIsDark] = useState(true);
+
   // Resizable panel widths/heights
   const containerRef = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState(420); // px
@@ -159,6 +166,28 @@ export default function CodingPage() {
       return Math.min(Math.max(next, 20), 80);
     });
   }, []);
+
+  useEffect(() => {
+    if (!timerActive || timeLeft <= 0) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setTimerActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerActive, timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const loadQuestion = async (level: string) => {
     setLoadingQuestion(true);
@@ -193,6 +222,8 @@ export default function CodingPage() {
       setFollowUp2("");
       setFollowUpAnswer2("");
       setFollowUpGrade2(null);
+      setTimeLeft(TIMER_DURATION);
+      setTimerActive(true);
     } catch (err) {
       console.error(err);
       setQuestionError("Failed to connect to backend.");
@@ -384,7 +415,6 @@ export default function CodingPage() {
       if (data.success) {
         setFollowUpGrade2(data);
 
-        // NAYA — poora coding-round attempt backend me save karo
         try {
           await fetch(`${BACKEND_URL}/api/interview/coding-attempt`, {
             method: "POST",
@@ -425,23 +455,60 @@ export default function CodingPage() {
     }
   };
 
+  // Theme tokens
+  const theme = {
+    bg: isDark ? "bg-[#0a0e1a]" : "bg-gray-50",
+    topBar: isDark ? "bg-[#0d1220] border-slate-800" : "bg-white border-gray-200",
+    panel: isDark ? "bg-[#0d1220]" : "bg-white",
+    text: isDark ? "text-white" : "text-gray-900",
+    textBody: isDark ? "text-slate-300" : "text-gray-600",
+    textMuted: isDark ? "text-slate-400" : "text-gray-500",
+    textFaint: isDark ? "text-slate-500" : "text-gray-400",
+    exampleBox: isDark ? "bg-black/30 border-slate-700/50" : "bg-gray-50 border-gray-200",
+    card: isDark ? "bg-linear-to-br from-slate-800/80 to-slate-800/40 border-slate-700/60" : "bg-white border-gray-200 shadow-sm",
+    statBox: isDark ? "bg-slate-900/40" : "bg-gray-100",
+    trackBg: isDark ? "bg-slate-900/60" : "bg-gray-200",
+    inputBg: isDark ? "bg-slate-900/60" : "bg-gray-50",
+  };
+
   // Difficulty selection screen
   if (!question) {
     return (
-      <div className="min-h-screen bg-[#0a0e1a] relative overflow-hidden flex items-center justify-center px-4">
+      <div className={`min-h-screen relative overflow-hidden flex items-center justify-center px-4 transition-colors ${theme.bg}`}>
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
 
+        {/* NAYA — theme toggle on difficulty screen */}
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className={`absolute top-6 right-6 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+            isDark ? "bg-slate-800 hover:bg-slate-700" : "bg-white hover:bg-gray-100 border border-gray-200"
+          }`}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark ? (
+            <svg className="w-4 h-4 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+            </svg>
+          )}
+        </button>
+
         <div className="relative text-center max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-slate-800/60 border border-slate-700 rounded-full px-4 py-1.5 mb-6">
+          <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 border ${
+            isDark ? "bg-slate-800/60 border-slate-700" : "bg-white border-gray-200"
+          }`}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-slate-400 font-medium tracking-wide">PrepAI Coding Round</span>
+            <span className={`text-xs font-medium tracking-wide ${theme.textMuted}`}>PrepAI Coding Round</span>
           </div>
 
-          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
+          <h1 className={`text-4xl font-bold mb-3 tracking-tight ${theme.text}`}>
             Ready to solve a problem?
           </h1>
-          <p className="text-slate-400 mb-10 text-lg">
+          <p className={`mb-10 text-lg ${theme.textMuted}`}>
             Pick a difficulty and get matched with a random question.
           </p>
 
@@ -485,20 +552,62 @@ export default function CodingPage() {
   const diffStyle = DIFFICULTY_STYLES[question.difficulty] || DIFFICULTY_STYLES.easy;
 
   return (
-    <div className="h-screen bg-[#0a0e1a] flex flex-col overflow-hidden">
+    <div className={`h-screen flex flex-col overflow-hidden transition-colors ${theme.bg}`}>
       {/* top bar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-[#0d1220] shrink-0">
+      <div className={`flex items-center justify-between px-6 py-3 border-b shrink-0 transition-colors ${theme.topBar}`}>
         <div className="flex items-center gap-3">
-          <span className="text-white font-bold text-sm">PrepAI</span>
-          <span className="text-slate-600">/</span>
-          <span className="text-slate-400 text-sm">{question.title}</span>
+          <span className={`font-bold text-sm ${theme.text}`}>PrepAI</span>
+          <span className={theme.textFaint}>/</span>
+          <span className={`text-sm ${theme.textMuted}`}>{question.title}</span>
         </div>
-        <button
-          onClick={() => setQuestion(null)}
-          className="text-slate-400 hover:text-white text-sm font-medium transition"
-        >
-          ← Change difficulty
-        </button>
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsDark(!isDark)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+              isDark ? "bg-slate-800 hover:bg-slate-700" : "bg-gray-100 hover:bg-gray-200 border border-gray-200"
+            }`}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? (
+              <svg className="w-4 h-4 text-amber-300" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+              </svg>
+            )}
+          </button>
+
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-sm font-semibold ${
+              timeLeft <= 300
+                ? "bg-rose-500/10 border-rose-500/40 text-rose-400"
+                : timeLeft <= 900
+                ? "bg-amber-500/10 border-amber-500/40 text-amber-400"
+                : isDark
+                ? "bg-slate-800/60 border-slate-700 text-slate-300"
+                : "bg-gray-100 border-gray-300 text-gray-700"
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                timerActive && timeLeft > 0 ? "bg-current animate-pulse" : "bg-slate-600"
+              }`}
+            />
+            {formatTime(timeLeft)}
+          </div>
+
+          <button
+            onClick={() => setQuestion(null)}
+            className={`text-sm font-medium transition ${
+              isDark ? "text-slate-400 hover:text-white" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            ← Change difficulty
+          </button>
+        </div>
       </div>
 
       {/* main split — resizable */}
@@ -506,32 +615,39 @@ export default function CodingPage() {
         {/* LEFT: question panel */}
         <div
           style={{ width: leftWidth }}
-          className="shrink-0 overflow-y-auto bg-[#0d1220] p-6"
+          className={`shrink-0 overflow-y-auto p-6 transition-colors ${theme.panel}`}
         >
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-white">{question.title}</h1>
+            <h1 className={`text-xl font-bold ${theme.text}`}>{question.title}</h1>
             <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide ${diffStyle.badge}`}>
               {question.difficulty}
             </span>
           </div>
 
-          <p className="text-slate-300 text-sm leading-relaxed mb-5">
+          {timeLeft === 0 && (
+            <div className="mb-4 bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-center">
+              <p className="text-rose-400 font-semibold text-sm">Time's up!</p>
+              <p className={`text-xs mt-1 ${theme.textMuted}`}>You can still submit, but the timer has ended.</p>
+            </div>
+          )}
+
+          <p className={`text-sm leading-relaxed mb-5 ${theme.textBody}`}>
             {question.description}
           </p>
 
           {question.examples?.length > 0 && (
             <div className="mb-5">
-              <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme.textFaint}`}>
                 Examples
               </h3>
               <div className="space-y-2">
                 {question.examples.map((ex: any, i: number) => (
-                  <div key={i} className="bg-black/30 border border-slate-700/50 rounded-lg p-3 text-xs font-mono">
-                    <div className="text-slate-500 mb-1">
-                      Input: <span className="text-blue-300">{ex.input}</span>
+                  <div key={i} className={`rounded-lg p-3 text-xs font-mono border ${theme.exampleBox}`}>
+                    <div className={`mb-1 ${theme.textFaint}`}>
+                      Input: <span className={isDark ? "text-blue-300" : "text-blue-600"}>{ex.input}</span>
                     </div>
-                    <div className="text-slate-500">
-                      Output: <span className="text-emerald-300">{ex.output}</span>
+                    <div className={theme.textFaint}>
+                      Output: <span className={isDark ? "text-emerald-300" : "text-emerald-600"}>{ex.output}</span>
                     </div>
                   </div>
                 ))}
@@ -541,12 +657,12 @@ export default function CodingPage() {
 
           {question.constraints?.length > 0 && (
             <div className="mb-5">
-              <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme.textFaint}`}>
                 Constraints
               </h3>
               <ul className="space-y-1">
                 {question.constraints.map((c: string, i: number) => (
-                  <li key={i} className="text-xs font-mono text-slate-400">
+                  <li key={i} className={`text-xs font-mono ${theme.textMuted}`}>
                     • {c}
                   </li>
                 ))}
@@ -555,9 +671,9 @@ export default function CodingPage() {
           )}
 
           {submitResult && !submitResult.error && (
-            <div className="mt-6 bg-linear-to-br from-slate-800/80 to-slate-800/40 border border-slate-700/60 rounded-xl p-5 animate-[fadeIn_0.3s_ease]">
+            <div className={`mt-6 border rounded-xl p-5 animate-[fadeIn_0.3s_ease] ${theme.card}`}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-semibold text-sm">Submission Result</h3>
+                <h3 className={`font-semibold text-sm ${theme.text}`}>Submission Result</h3>
                 <div className="text-right">
                   <span
                     className={`text-2xl font-bold ${
@@ -570,11 +686,11 @@ export default function CodingPage() {
                   >
                     {submitResult.score}
                   </span>
-                  <span className="text-slate-500"> / 10</span>
+                  <span className={theme.textFaint}> / 10</span>
                 </div>
               </div>
 
-              <div className="w-full bg-slate-900/60 rounded-full h-1.5 mb-3 overflow-hidden">
+              <div className={`w-full rounded-full h-1.5 mb-3 overflow-hidden ${theme.trackBg}`}>
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
                     submitResult.score >= 7
@@ -587,8 +703,8 @@ export default function CodingPage() {
                 />
               </div>
 
-              <p className="text-slate-400 text-xs mb-3">
-                <span className="text-white font-medium">{submitResult.passed}</span> / {submitResult.total} test cases passed
+              <p className={`text-xs mb-3 ${theme.textMuted}`}>
+                <span className={`font-medium ${theme.text}`}>{submitResult.passed}</span> / {submitResult.total} test cases passed
               </p>
 
               <div className="flex flex-col gap-1.5">
@@ -612,7 +728,7 @@ export default function CodingPage() {
           )}
 
           {loadingFollowUp && (
-            <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
+            <div className={`mt-4 flex items-center gap-2 text-sm ${theme.textMuted}`}>
               <span className="w-4 h-4 border-2 border-slate-600 border-t-purple-400 rounded-full animate-spin" />
               Interviewer is thinking of a follow-up...
             </div>
@@ -631,7 +747,7 @@ export default function CodingPage() {
                 onChange={(e) => setFollowUpAnswer(e.target.value)}
                 placeholder="Type your answer here..."
                 rows={3}
-                className="w-full bg-slate-900/60 text-white border border-purple-700/40 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-3"
+                className={`w-full text-sm rounded-lg p-3 resize-none mb-3 border border-purple-700/40 focus:outline-none focus:ring-2 focus:ring-purple-500 ${theme.inputBg} ${theme.text}`}
               />
 
               <button
@@ -643,7 +759,7 @@ export default function CodingPage() {
               </button>
 
               {followUpGrade && (
-                <div className="mt-4 bg-black/30 border border-purple-700/30 rounded-lg p-4">
+                <div className="mt-4 bg-black/20 border border-purple-700/30 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-purple-300 text-xs font-semibold uppercase tracking-wide">
                       Answer Evaluation
@@ -663,7 +779,7 @@ export default function CodingPage() {
           )}
 
           {loadingFollowUp2 && (
-            <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
+            <div className={`mt-4 flex items-center gap-2 text-sm ${theme.textMuted}`}>
               <span className="w-4 h-4 border-2 border-slate-600 border-t-indigo-400 rounded-full animate-spin" />
               Interviewer is thinking of a complexity question...
             </div>
@@ -682,7 +798,7 @@ export default function CodingPage() {
                 onChange={(e) => setFollowUpAnswer2(e.target.value)}
                 placeholder="Type your answer here..."
                 rows={3}
-                className="w-full bg-slate-900/60 text-white border border-indigo-700/40 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none mb-3"
+                className={`w-full text-sm rounded-lg p-3 resize-none mb-3 border border-indigo-700/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${theme.inputBg} ${theme.text}`}
               />
 
               <button
@@ -694,7 +810,7 @@ export default function CodingPage() {
               </button>
 
               {followUpGrade2 && (
-                <div className="mt-4 bg-black/30 border border-indigo-700/30 rounded-lg p-4">
+                <div className="mt-4 bg-black/20 border border-indigo-700/30 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-indigo-300 text-xs font-semibold uppercase tracking-wide">
                       Answer Evaluation
@@ -732,22 +848,22 @@ export default function CodingPage() {
                 </span>
               </div>
 
-              <div className="flex gap-3 text-xs text-slate-400">
-                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
-                  <p className="text-slate-500 mb-1">Coding</p>
+              <div className="flex gap-3 text-xs">
+                <div className="flex-1 bg-black/20 rounded-lg p-2.5">
+                  <p className="text-slate-400 mb-1">Coding</p>
                   <p className="text-white font-semibold text-sm">{submitResult.score} / 10</p>
                 </div>
-                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
-                  <p className="text-slate-500 mb-1">Follow-up 1</p>
+                <div className="flex-1 bg-black/20 rounded-lg p-2.5">
+                  <p className="text-slate-400 mb-1">Follow-up 1</p>
                   <p className="text-white font-semibold text-sm">{followUpGrade.score} / 10</p>
                 </div>
-                <div className="flex-1 bg-slate-900/40 rounded-lg p-2.5">
-                  <p className="text-slate-500 mb-1">Follow-up 2</p>
+                <div className="flex-1 bg-black/20 rounded-lg p-2.5">
+                  <p className="text-slate-400 mb-1">Follow-up 2</p>
                   <p className="text-white font-semibold text-sm">{followUpGrade2.score} / 10</p>
                 </div>
               </div>
 
-              <div className="w-full bg-slate-900/60 rounded-full h-1.5 mt-3 overflow-hidden">
+              <div className="w-full bg-black/20 rounded-full h-1.5 mt-3 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-linear-to-r from-blue-500 to-indigo-400 transition-all duration-700"
                   style={{ width: `${((submitResult.score + followUpGrade.score + followUpGrade2.score) / 3 / 10) * 100}%` }}

@@ -148,7 +148,7 @@ ${resumeText}`;
         content: prompt,
       },
     ],
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
   });
 
   const raw = completion.choices[0].message.content;

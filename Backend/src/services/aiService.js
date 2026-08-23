@@ -28,7 +28,7 @@ ${jobDescription}
 
   const completion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
   });
 
   const content = completion.choices[0].message.content || "{}";
@@ -49,7 +49,7 @@ ${bullet}
 
   const completion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
   });
 
   const content = completion.choices[0].message.content || "{}";
@@ -77,7 +77,7 @@ ${role}
 
   const completion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
   });
 
   return parseStructuredJson(completion.choices[0].message.content);
@@ -104,7 +104,7 @@ ${jobDescription || "General optimization"}
 
   const completion = await groq.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-20b",
   });
 
   return parseStructuredJson(completion.choices[0].message.content);

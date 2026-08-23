@@ -6,6 +6,7 @@ import authRoutes from "./routes/authroutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import executeRoutes from "./routes/executeRoutes.js";
+import companyInterviewRoutes from "./routes/companyInterviewRoutes.js";
  import path from "path";
 const app=express();
 app.use(express.json());
@@ -24,6 +25,7 @@ app.use(["/api/interview", "/api/interviews"], interviewRoutes);
 app.use("/api/resumes",resumeRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/interview", interviewRoutes);
+app.use("/api/company-interview", companyInterviewRoutes);
 app.get("/",(req,res)=>{
     res.status(200).json({message:"Hello World"});
 });
